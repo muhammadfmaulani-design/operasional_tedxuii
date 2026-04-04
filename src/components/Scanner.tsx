@@ -58,7 +58,7 @@ const Scanner: React.FC<ScannerProps> = ({ scanMode, result, setResult, onBack }
     }
 
     try {
-      const response = await fetch('https://api-tedxuii.vercel.app/api/v1/tickets/scan', {
+      const response = await fetch('https://api-tedxuii.vercel.app/api/v1/ticket-scanner/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticket_code: decodedText, scan_mode: scanMode })
