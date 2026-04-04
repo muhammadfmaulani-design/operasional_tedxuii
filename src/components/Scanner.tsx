@@ -7,15 +7,21 @@ interface ScannerProps {
   scanMode: number;
   result: ScanResponse | null;
   setResult: React.Dispatch<React.SetStateAction<ScanResponse | null>>;
-  onBack: () => void; // Fungsi kembali ke menu
+  onBack: () => void;
 }
 
 const Scanner: React.FC<ScannerProps> = ({ scanMode, result, setResult, onBack }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  
+  // KUNCI UTAMA: Untuk mencegah pengiriman API ganda
+  const isProcessing = useRef<boolean>(false);
 
   useEffect(() => {
     if (!result) {
+      // Reset kunci saat kamera siap digunakan kembali
+      isProcessing.current = false;
+
       const timer = setTimeout(() => {
         scannerRef.current = new Html5QrcodeScanner(
           "reader",
@@ -35,9 +41,21 @@ const Scanner: React.FC<ScannerProps> = ({ scanMode, result, setResult, onBack }
   }, [scanMode, result]);
 
   async function onScanSuccess(decodedText: string) {
-    if (loading || result) return;
-    if (scannerRef.current) scannerRef.current.pause(true);
+    // Jika sedang memproses atau sudah ada hasil, blokir semua scan tambahan
+    if (isProcessing.current || result || loading) return;
+
+    // Aktifkan kunci
+    isProcessing.current = true;
     setLoading(true);
+
+    // Hentikan kamera segera
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.pause(true);
+      } catch (e) {
+        console.warn("Gagal pause kamera:", e);
+      }
+    }
 
     try {
       const response = await fetch('https://api-tedxuii.vercel.app/api/v1/tickets/scan', {
@@ -45,16 +63,18 @@ const Scanner: React.FC<ScannerProps> = ({ scanMode, result, setResult, onBack }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticket_code: decodedText, scan_mode: scanMode })
       });
+      
       const data = await response.json();
       setResult(data);
     } catch (error) {
       setResult({ status: 'error', ui_color: 'red', message: 'Koneksi ke server terputus.' });
+      // Jika error koneksi, kita buka kuncinya agar bisa coba lagi
+      isProcessing.current = false;
     } finally {
       setLoading(false);
     }
   }
 
-  // Label mode untuk ditampilkan di atas kamera
   const modeName = scanMode === 1 ? 'CHECK-IN PAGI' : scanMode === 2 ? 'SESI 2 (VIP)' : 'KLAIM SERTIF';
 
   if (result) {
@@ -82,7 +102,10 @@ const Scanner: React.FC<ScannerProps> = ({ scanMode, result, setResult, onBack }
           
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => setResult(null)}
+              onClick={() => {
+                isProcessing.current = false; // Buka kunci sebelum reset
+                setResult(null);
+              }}
               className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-lg hover:bg-black active:scale-95 transition-all shadow-xl"
             >
               LANJUT SCAN TIKET
@@ -101,7 +124,6 @@ const Scanner: React.FC<ScannerProps> = ({ scanMode, result, setResult, onBack }
 
   return (
     <div className="w-full max-w-sm flex flex-col">
-      {/* Header Kamera: Tombol Back & Info Mode Aktif */}
       <div className="flex justify-between items-center mb-6 px-1">
         <button 
           onClick={onBack} 
