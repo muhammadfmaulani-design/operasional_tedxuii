@@ -75,7 +75,11 @@ const Scanner: React.FC<ScannerProps> = ({ scanMode, result, setResult, onBack }
     }
   }
 
-  const modeName = scanMode === 1 ? 'CHECK-IN PAGI' : scanMode === 2 ? 'SESI 2 (VIP)' : 'KLAIM SERTIF';
+  // PERBAIKAN: Penyesuaian Nama Mode Sesuai Konsep 3 Tiket Baru
+  const modeName = 
+    scanMode === 1 ? 'CHECK-IN MORNING' : 
+    scanMode === 2 ? 'CHECK-IN AFTERNOON' : 
+    'KLAIM MERCH/SERTIF';
 
   if (result) {
     return (
