@@ -96,6 +96,7 @@ const OrderDashboard = ({ onOpenScanner, onOpenManualTicket }: OrderDashboardPro
   const [orders, setOrders] = useState<PublicOrder[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [selectedScan, setSelectedScan] = useState('Semua');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingTicketIds, setUpdatingTicketIds] = useState<string[]>([]);
@@ -178,6 +179,14 @@ const OrderDashboard = ({ onOpenScanner, onOpenManualTicket }: OrderDashboardPro
 
       if (!categoryMatched) return false;
 
+      if (selectedScan !== 'Semua') {
+        const scannedCount = order.tickets.filter((t) => t.is_used).length;
+        const total = order.tickets.length;
+        if (selectedScan === 'Sudah Scan' && !(scannedCount === total && total > 0)) return false;
+        if (selectedScan === 'Belum Scan' && !(scannedCount === 0 && total > 0)) return false;
+        if (selectedScan === 'Sebagian' && !(scannedCount > 0 && scannedCount < total)) return false;
+      }
+
       if (!keyword) return true;
 
       const haystacks = [
@@ -192,7 +201,7 @@ const OrderDashboard = ({ onOpenScanner, onOpenManualTicket }: OrderDashboardPro
 
       return haystacks.some((value) => value.toLowerCase().includes(keyword));
     });
-  }, [orders, searchTerm, selectedCategory]);
+  }, [orders, searchTerm, selectedCategory, selectedScan]);
 
   const totalTickets = useMemo(
     () => orders.reduce((sum, order) => sum + order.quantity, 0),
@@ -285,7 +294,6 @@ const OrderDashboard = ({ onOpenScanner, onOpenManualTicket }: OrderDashboardPro
         <div className="mt-4 flex flex-wrap gap-2">
           {categoryOptions.map((category) => {
             const isActive = category === selectedCategory;
-
             return (
               <button
                 key={category}
@@ -297,6 +305,38 @@ const OrderDashboard = ({ onOpenScanner, onOpenManualTicket }: OrderDashboardPro
                 }`}
               >
                 {category}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Status Scan:</span>
+          {(
+            [
+              { label: 'Semua', color: null },
+              { label: 'Sudah Scan', color: 'emerald' },
+              { label: 'Belum Scan', color: 'amber' },
+              { label: 'Sebagian', color: 'sky' },
+            ] as const
+          ).map(({ label, color }) => {
+            const isActive = selectedScan === label;
+            const activeClass =
+              color === 'emerald' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
+              : color === 'amber' ? 'bg-amber-500 text-white shadow-lg shadow-amber-900/30'
+              : color === 'sky' ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/30'
+              : 'bg-red-600 text-white shadow-lg shadow-red-900/30';
+            return (
+              <button
+                key={label}
+                onClick={() => setSelectedScan(label)}
+                className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                  isActive
+                    ? activeClass
+                    : 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {label}
               </button>
             );
           })}
